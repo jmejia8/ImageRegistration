@@ -106,17 +106,17 @@ function testRW()
     X = readcsv("data/test1.csv")'
     Y = readcsv("data/test1-2.csv")'
 
-    K     = 7
-    η_max = 5.0
+    η = 5.0
     
-    limits= (-100, 100)
+    lims= (-100, 100)
     D = 6
-    N = K*D
 
-    max_evals = 10000D
     fitnessFunc(x) = myError(x, Y, X)
 
-    parameters, ee = eca(fitnessFunc, D, N, max_evals, K, η_max, limits, 0)
+    parameters, ee = eca(fitnessFunc, D;η_max = η,
+                                        limits = lims,
+                                        termination= x->std(x) < 1e-15,
+                                        correctSol=false)
 
     X_approx = applyTransform(Y, parameters)
     Tr = matlabAffine(X, Y)
@@ -152,7 +152,6 @@ function main()
     η   = 5.0
     lims= (-1, 1)
     D   = 10
-    max_evals = 10000D
 
     for i in 1:5
         # Random affine transformation
