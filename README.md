@@ -17,4 +17,11 @@ First install dependencies:
 		Pkg.add("MATLAB")
 	```
 
-After dependencies installation, just run `main.jl` in Julia REPL.
+## My First Time
+
+After dependencies installation:
+
+1. Open terminal.
+2. cd to repo.
+3. Write `include("main.jl")` in Julia REPL.
+4. Imagine a better world.
