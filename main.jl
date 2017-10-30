@@ -26,8 +26,6 @@ function plotScatter(x, y, z, w)
 end
 
 function applyTransform(x, parameters)
-    # A = [prms1 prms2; prms3 prms4;]
-    # b = [prms4, prms6]
 
     # rotation and scale matrix
     A = [parameters[1] parameters[2];
@@ -92,7 +90,6 @@ function matlabRANSAC(X, Y)
              'NumTrials',20000,'DistanceThreshold',1e-4)"
     
     return [Tr[1], Tr[2],Tr[4], Tr[5],Tr[3], Tr[6]]
-    # reshape(Tr[1:2,:], 1, 6)
 end
 
 function matlabAffine(X, Y)
@@ -103,7 +100,6 @@ function matlabAffine(X, Y)
         "
 
     return [Tr[1], Tr[2],Tr[4], Tr[5],Tr[3], Tr[6]] 
-    # reshape(Tr[1:2,:], 1, 6)
 end
 
 function testRW()
@@ -134,11 +130,13 @@ end
 
 
 function main()
+    # some trajectories for test algorithm
     circle(θ, r = 1) = r .* cos.(θ), r .* sin.(θ)
     spiral(θ) = exp.(0.1θ).*cos.(4π*θ), exp.(0.1θ).*sin.(4π*θ)
     curve1(θ) = θ.*cos.(θ), sin.(2θ)
     curve2(θ, r) = r.*cos.(2*θ), sin.(2*θ ./ (1+r))
 
+    # number of points
     nPoints = 100
 
     θ = linspace(0, 2π, nPoints)
@@ -146,23 +144,25 @@ function main()
     
     x, y = curve1(θ)
 
+    # Data
     X = 10 + [x y]'
 
 
-    η = 5.0
-    
+    # parameters for ECA algorithm
+    η   = 5.0
     lims= (-1, 1)
-    D = 10
-
+    D   = 10
     max_evals = 10000D
 
     for i in 1:5
+        # Random affine transformation
         originalParms = 10randn(6)
         fitnessFunc(x) = myError(x, Y, X)
 
+        # uncomment for additive noise
         Y = applyTransform(X, originalParms)  #+ randn(2, nPoints)
 
-
+        # Find affine transformation
         @time approxParms, ee = eca(fitnessFunc, D; η_max = η,
                                                     limits = lims,
                                                     termination= x->std(x) < 1e-15,
@@ -170,10 +170,14 @@ function main()
 
         X_approx = applyTransform(Y, approxParms)
 
+        # Calculate affine transformation using MATLAB
         @time Tr = matlabAffine(X, Y)
         X_matlab = applyTransform(Y, Tr)
+
+        # Plot results
         plotScatter(X', Y', X_approx', X_matlab')
 
+        # comparing error
         @printf("ECA  error: %e\n", norm(X - X_approx))
         @printf("MLAB error: %e\n", norm(X - X_matlab))
     end
