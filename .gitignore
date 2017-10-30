@@ -1,0 +1,5 @@
+*.sublime-project
+
+*.jl.cov
+*.jl.*.cov
+*.jl.mem
