@@ -51,25 +51,12 @@ function a_pplyTransform(x, parameters)
     return  aaa
 end
 
-function myError(population, x, xReal)
-    rows, cols = size(population, 1, 2)
+function myError(parameters, x, xReal)
 
-    if cols == 1
-        population = population'
-        rows, cols = size(population, 1, 2)
-    end
+    y = applyTransform(x, parameters)
+    err = norm(y - xReal)
 
-    errors = zeros(rows)
-    for i = 1:rows
-        y = applyTransform(x, population[i,:])
-        errors[i] = norm(y - xReal)
-    end
-
-    if rows == 1
-        return errors[1]
-    end
-
-    return errors
+    return err
 
 
 end
@@ -103,8 +90,8 @@ function matlabAffine(X, Y)
 end
 
 function testRW()
-    X = readcsv("data/test1.csv")'
-    Y = readcsv("data/test1-2.csv")'
+    X = readcsv("data/test5.csv")'
+    Y = readcsv("data/test5-1.csv")'
 
     η = 5.0
     
@@ -142,7 +129,7 @@ function main()
     θ = linspace(0, 2π, nPoints)
     r = linspace(0,  1, nPoints)
     
-    x, y = curve1(θ)
+    x, y = spiral(θ)
 
     # Data
     X = 10 + [x y]'
@@ -151,9 +138,9 @@ function main()
     # parameters for ECA algorithm
     η   = 5.0
     lims= (-1, 1)
-    D   = 10
+    D   = 6
 
-    for i in 1:5
+    for i in 1:1
         # Random affine transformation
         originalParms = 10randn(6)
         fitnessFunc(x) = myError(x, Y, X)
