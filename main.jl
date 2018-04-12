@@ -1,209 +1,198 @@
-using PyPlot
-using MATLAB
-using Metaheuristics
-
-function plotScatter(x, y, z, w)
-    subplot(2,2,1)
-    plot(x[:,1], x[:,2], marker=:o, lw = 0, markersize=4, color=:b)
-    title("A")
-    grid("on")
-    
-    subplot(2,2,2)
-    plot(y[:,1], y[:,2], marker=:o, lw = 0, markersize=4, color=:r)
-    title("B")
-    grid("on")
-
-    subplot(2,2, 3)
-    title("ECA-MP")
-    plot(x[:,1], x[:,2], marker=:o, lw = 0, markersize=4, color=:b)
-    plot(z[:,1], z[:,2], marker=:o, lw = 0, markersize=4, color=:r)
-    grid("on")
-
-    subplot(2,2, 4)
-    title("MSAC")
-    plot(x[:,1], x[:,2], marker=:o, lw = 0, markersize=4, color=:b)
-    plot(w[:,1], w[:,2], marker=:o, lw = 0, markersize=4, color=:r)
-    grid("on")
-
-    # xlim(0, 250)
-    # ylim(0, 350)
-end
-
-function applyTransform(x, parameters)
-
-    # rotation and scale matrix
-    A = [parameters[1] parameters[2];
-         parameters[3] parameters[4]]
-
-    # translate vector
-    t = [parameters[5]; parameters[6]]
-
-    cols = size(x, 2)
-    return A * x + repmat(t, 1, cols)
-end
-
-function applyTransformNoAffine(pts, parameters)
-    p(x,y, a, b, c) = a*x + b*y + c
-    g(x,y, a) = a[1]*x.^2 + a[2]*y.^2 + a[3]*x.*y + a[4]*x + a[5]*y + a[6]
-
-    x = pts[1,:]
-    y = pts[2,:]
-
-    # a,b,c,d,ee,f = parameters
-    # xx = p(x, y, a,  b, c)
-    # yy = p(x, y, d, ee, f)
-    a = parameters[1:6]
-    b = parameters[7:12]
-
-    xx = g(x, y, a)
-    yy = g(x, y, b)
-
-    aaa =  [xx yy]'
+include("tools.jl")
 
 
-    return  aaa
-end
 
 function myNorm(X, Y)
-    sum((Y - X).^2) / size(Y,2)
+    return sum( (Y - X).^2 ) / size(Y,2)
 end
 
-function myError(parameters, x, xReal)
+# function myNorm(X, Y)
+#     Nx = size(X, 2)
+#     Ny = size(Y, 2)
 
-    y = applyTransformNoAffine(x, parameters)
-    # err = norm(y - xReal)
-    err = myNorm(xReal, y)# sum((y - xReal).^2) / size(y,2)
+#     μ = zeros(Int64, Ny, Nx)
+#     s = 0.0
+#     for i = 1:Ny
 
+#         m = -1.0
+#         jmin = 0
+#         for j= 1:Nx
+#             if sum(μ[:,j]) != 0
+#                 continue
+#             end
 
-    return err
+#             d = norm(X[:, j] - Y[:, i])
+
+#             if m < 0 || d < m
+#                 m = d
+#                 jmin = j
+#             end
+
+#         end
+#         μ[i, jmin] = 1
+#         s += m
+#     end
+
+#     return  s / Ny
+# end
+
+function myError(parameters, X, Y, method, T)
+    # if method == "affine"
+    #     return myNorm(X, applyAffine(Y, parameters))
+    # elseif method == "ortho"
+    #     return myNorm(X, applyOrtho(Y, parameters))
+    # elseif method == "quadratic"
+    #     return myNorm(X, applyQuadratic(Y, parameters))
+    # end
+
+    myNorm(X, T(Y, parameters))
 
 
 end
 
-function matlabProcrustes(X, Y)
-    mat"[d,Z,transform] = procrustes($(X'), $(Y'));
-            $c = transform.c;
-            $T = transform.T;
-            $b = transform.b;
-            "
-    T *= b
-    return  [ reshape(T, 1, 4) c[1,:]' ]
-end
+function strategy(method = "affine")
+    # methods: ortho, affine, quadratic
+    η = 5.0
+    lims = [-2, 2]
+    D = 6
+    correctSolution = false
+    func = applyAffine
 
-function matlabRANSAC(X, Y)
-    mat"$Tr = estimateFundamentalMatrix($(X'), $(Y'),...
-             'Method','Norm8Point',...
-             'NumTrials',20000,'DistanceThreshold',1e-4)"
+    if method == "ortho"
+        η = 2.0
     
-    return [Tr[1], Tr[2],Tr[4], Tr[5],Tr[3], Tr[6]]
+        lims= [ 0.0 -100.0  -10.0 -5.0 -5.0; 
+                2π   100     10   5.0 5.0]
+        D = 5
+        correctSolution = true
+        func = applyOrtho
+    elseif method == "quadratic"
+        lims = [-2, 2]
+        D = 12
+        func = applyQuadratic
+    elseif method == "quadratic2"
+        lims = [-2, 2]
+        func = applyQuadratic2
+    end
+
+    return η, lims, D, correctSolution, func
 end
 
-function matlabAffine(X, Y)
-    mat"[tform,inlierPtsDistorted,inlierPtsOriginal] = ...
-        estimateGeometricTransform($(Y'),$(X'),...
-        'affine');
-        $Tr = tform.T
-        "
-
-    return [Tr[1], Tr[2],Tr[4], Tr[5],Tr[3], Tr[6]] 
-end
 
 function testRW()
-    Y = readcsv("data/test6.csv")'
-    X = readcsv("data/test6-1.csv")'
+    nmes = ["./convergence_sin_affine.csv",
+            "./convergence_chin_affine.csv",
+            "./convergence_papa_affine.csv",
+            "./convergence_papa2_affine.csv",
+            "./convergence_pez_affine.csv",
+           ]
 
-    η = 5.0
-    
-    lims= (-100, 100)
-    D = 6
+zz = 5
+for i = 1:zz
 
-    fitnessFunc(x) = myError(x, Y, X)
+    X = readcsv("data/test$(i+1).csv")'
+    Y = readcsv("data/test$(i+1)-1.csv")'
+
+    method = "quadratic"
+    η, lims, D, correctSolution, T = strategy(method)
+
+    fitnessFunc(x, method = method, Tr = T) = myError(x, X, Y, method, Tr)
 
     @time parameters, ee = eca(fitnessFunc, D;η_max = η,
+                                        N = 10D,
                                         limits = lims,
-                                        max_evals=100000D,
-                                        termination= x->std(-1 + 1.0./x) < 1e-10,
-                                        correctSol=false)
+                                        max_evals=10000D,
+                                        termination= x->std(-1.0 + 1.0 ./ x) < 1e-10,
+                                        saveConvergence = true,
+                                        correctSol=correctSolution)
 
-    X_approx = applyTransformNoAffine(Y, parameters)
+    println(parameters)
+
+    X_approx = T(Y, parameters)
     
     @time Tr = matlabAffine(X, Y)
-    X_matlab = applyTransform(Y, Tr)
-    plotScatter(X', Y', X_approx', X_matlab')
+    X_matlab = applyAffine(Y, Tr)
+    @printf("MSAC error: %e\n", myNorm(X, X_matlab))
+    continue
+    # plotScatter(X', Y', X_approx', X_matlab')
 
-    @printf("ECA  error: %e\n", myNorm(X, X_approx))
-    @printf("MLAB error: %e\n", myNorm(X, X_matlab))
+    subplot(5, 3, 3i-2)
+    plot(X[1,:], X[2,:], marker=:o, lw=0, color="blue", markersize=4)
+    plot(Y[1,:], Y[2,:], marker=:o, lw=0, color="red", markersize=4)
+    grid("on")
 
+    subplot(5, 3, 3i-1)
+    plot(X[1,:], X[2,:], marker=:o, lw=0, color="blue", markersize=4)
+    plot(X_approx[1,:], X_approx[2,:], marker=:o, lw=0, color="red", markersize=4)
+    grid("on")
+
+    subplot(5, 3, 3i)
+    a = readcsv(nmes[i])
+
+    b = 1:length(a)
+    a = 10 + log.(1.0 - a)
+
+    plot(b, a, color="black")
+    xlabel("Generation")
+    ylabel("Log Error")
+    title("Convergence")
+    grid("on")
+
+    # @printf("ECA  error: %e\n", myNorm(X, X_approx))
+    @printf("MSAC error: %e\n", myNorm(X, X_matlab))
+end
 end
 
-function testFuncs(nPoints, i = 1)
-    # some trajectories for test algorithm
-    circle(θ, r = 1) = r .* cos.(θ), r .* sin.(θ)
-    spiral(θ) = exp.(0.1θ).*cos.(4π*θ), exp.(0.1θ).*sin.(4π*θ)
-    curve1(θ) = θ.*cos.(θ), sin.(2θ)
-    curve2(θ, r) = r.*cos.(2*θ), sin.(2*θ ./ (1+r))
 
-
-    θ = linspace(0, 2π, nPoints)
-    r = linspace(0,  1, nPoints)
-
-    if i == 2
-        return spiral(θ)
-    elseif i == 3
-        return curve1(θ)
-    elseif i == 4
-        return curve2(θ, r)
-    else
-        return circle(θ)
-    end
-    
-end
 
 function main()
     # number of points
-    nPoints = 100
+    nPoints = 50
 
-    x, y = testFuncs(nPoints, 1)
+    x, y = testFuncs(nPoints, 5)
 
     # Data
     X = 10 + [x y]'
 
 
     # parameters for ECA algorithm
-    η   = 5.0
-    lims= (-100, 100)
-    D   = 12
+    method = "affine"
+    η, lims, D, correctSolution, T = strategy(method)
 
     for i in 1:1
         # Random affine transformation
-        originalParms = -100 + 200rand(12)
-        fitnessFunc(x) = myError(x, Y, X)
+        fitnessFunc(x, method = method, Tr = T) = myError(x, X, Y, method, Tr)
 
         # uncomment for additive noise
-        Y = applyTransformNoAffine(X, originalParms )
-        Y = applyTransformNoAffine(Y, originalParms )
+        originalParms = 10randn(12)
+        Y = applyQuadratic(X, originalParms )
+        Y = applyQuadratic(Y, -originalParms )
+
+        # writecsv("points.csv", Y)
 
         # Find affine transformation
         @time approxParms, ee = eca(fitnessFunc, D; η_max = η,
+                                                        N = 10D,
                                                     limits = lims,
-                                                    max_evals=100000D,
-                                                    termination= x->std(-1 + 1.0./x) < 1e-10,
+                                                    max_evals=30000D,
+                                                    saveGens = false,
+                                                    termination= x->std( -1.0 + 1.0 ./ x) < 1e-10,
                                                     correctSol=false)
 
-        X_approx = applyTransformNoAffine(Y, approxParms)
+        X_approx = T(Y, approxParms)
 
         # Calculate affine transformation using MATLAB
         @time Tr = matlabAffine(X, Y)
-        X_matlab = applyTransform(Y, Tr)
+        X_matlab = applyAffine(Y, Tr)
 
         # Plot results
         plotScatter(X', Y', X_approx', X_matlab')
 
         # comparing error
         @printf("ECA  error: %e\n", myNorm(X, X_approx))
-        @printf("MLAB error: %e\n", myNorm(X, X_matlab))
+        @printf("MSAC error: %e\n", myNorm(X, X_matlab))
     end
 end
 
-main()
-# testRW()
+# main()
+testRW()

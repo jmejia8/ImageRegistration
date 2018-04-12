@@ -42,6 +42,14 @@ function applyAffine(x, parameters)
     return A * x + repmat(t, 1, cols)
 end
 
+function applyQuadratic2(pts, parameters)
+    p(x, y, v) = v[1]*(v[2]*x + v[3]*y) .^ 2
+
+    a = p(pts[1, :], pts[2, :], parameters[1:3])
+    b = p(pts[1, :], pts[2, :], parameters[4:6])
+
+    return [a  b]'
+end
 function applyQuadratic(pts, parameters)
     p(x,y, a, b, c) = a*x + b*y + c
     g(x,y, a) = a[1]*x.^2 + a[2]*y.^2 + a[3]*x.*y + a[4]*x + a[5]*y + a[6]
