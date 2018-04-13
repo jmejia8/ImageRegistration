@@ -3,7 +3,7 @@
 Experiments for finding affine transformations between two sets of points. 
 I compare an Evolutionary Algorithm and a classic method RANSAC (written in MATLAB).
 
-It is coded for Julia 0.6.0
+It is coded for Julia 0.6.x
 
 ## Instructions
 
