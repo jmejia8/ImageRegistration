@@ -37,33 +37,12 @@ function distanceMatrix(X, Y)
 end
 
 function hausdorffDistance(X, Y)
-
-
-    Nx = size(X, 2)
-    Ny = size(Y, 2)
     D = distanceMatrix(X, Y)
 
-    h(X, Y, D) = begin
-        hh = 0.0
-        for i = 1:Ny
-            shortest = Inf
-            for j = 1:Nx
-                if D[i, j] < shortest
-                    shortest = D[i, j]
-                end
-            end
+    h(D) = maximum( minimum(D, 1) )
 
-            if shortest > hh
-                hh = shortest
-            end
-        end
+    return max(h(D), h(D'))
 
-        return hh
-
-    end
-
-
-    return max(h(X, Y, D), h(Y, X, D'))
 
 end
 
