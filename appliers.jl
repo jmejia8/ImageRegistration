@@ -39,3 +39,24 @@ function applyTransformNoAffine(pts, parameters)
 
     return  aaa
 end
+
+function applyOrtho(x, parameters)
+    # θ: angle
+    # T = [x, y]: translate
+    # S = [Sx. Sy] scale
+
+    θ = parameters[1]
+    T = parameters[2:3]
+    S = parameters[4:5]
+    # , T, S
+
+    a = cos(-θ)
+    b = sin(-θ)
+    m = mean(x, 2)
+
+    x = x .- m
+    A = [ S[1]*a -b; b S[2]*a ]
+    return (A * x) .+ T .+ m
+
+
+end

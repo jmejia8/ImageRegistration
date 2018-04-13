@@ -9,41 +9,53 @@ function myNorm(X, Y)
     sum((Y - X).^2) / size(Y,2)
 end
 
-function myError(parameters, x, xReal)
+function myError(parameters, x, xDesired)
 
     y = applyTransformation(x, parameters)
 
-    return myNorm(xReal, y)
+    return myNorm(xDesired, y)
 
 end
 
-function main()
-    Y = readcsv("data/test6.csv")'
-    X = readcsv("data/test6-1.csv")'
-
+function ecapr(X, Y, method=:affine)
+    # Y is the desired point set
     η = 2.0
     
     lims= [-5, 5.0]
-    D = 6
 
-    fitnessFunc(x) = myError(x, Y, X)
+    if method == :affine
+        D = 6
+    else
+        D = 12
+    end
 
-    @time parameters, ee = eca(fitnessFunc, D;η_max = η,
+    fitnessFunc(x) = myError(x, X, Y)
+
+    parameters, ee = eca(fitnessFunc, D;η_max = η,
                                         limits = lims,
                                         max_evals=1000D,
-                                        # termination= x->std(-1 + 1.0./x) < 1e-10,
                                         correctSol=false)
 
-    X_approx = applyTransformation(Y, parameters)
-    
-    @time Tr = matlabAffine(X, Y)
-    X_matlab = applyTransformation(Y, Tr)
-    plotScatter(X', Y', X_approx', X_matlab')
+    # performs Y = T(X)
+    return applyTransformation(X, parameters)
+end
 
-    @printf("ECA  error: %e\n", myNorm(X, X_approx))
-    @printf("MLAB error: %e\n", myNorm(X, X_matlab))
+function main()
+    # observed
+    X = readcsv("data/test6.csv")'
 
-    println(parameters)
+    # desired
+    Y = readcsv("data/test6-1.csv")'
+
+    Y_ecapr = ecapr(X, Y)
+
+    Y_msac = applyTransformation(X, matlabAffine(X, Y))
+
+    plotScatter(Y', X', Y_ecapr', Y_msac')
+
+    @printf("ECA  error: %e\n", myNorm(Y, Y_ecapr))
+    @printf("MSAC error: %e\n", myNorm(Y, Y_msac))
+
 end
 
 main()
