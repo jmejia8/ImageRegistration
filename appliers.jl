@@ -12,15 +12,15 @@ function applyAffine(x, parameters)
          parameters[3] parameters[4]]
 
     # translate vector
-    t = [parameters[5]; parameters[6]]
+    t = [parameters[5], parameters[6]]
 
     cols = size(x, 2)
-    return A * x + repmat(t, 1, cols)
+    return A * x .+ t
 end
 
 function applyTransformNoAffine(pts, parameters)
-    p(x,y, a, b, c) = a*x + b*y + c
-    g(x,y, a) = a[1]*x.^2 + a[2]*y.^2 + a[3]*x.*y + a[4]*x + a[5]*y + a[6]
+    p(x,y, a, b, c) = a*x .+ b*y .+ c
+    g(x,y, a) = a[1]*x.^2 .+ a[2]*y.^2 .+ a[3]*x.*y .+ a[4]*x .+ a[5]*y .+ a[6]
 
     x = pts[1,:]
     y = pts[2,:]

@@ -1,4 +1,8 @@
 using Metaheuristics
+import Printf.@printf
+import DelimitedFiles.readdlm
+
+readcsv(name) = readdlm(name,',')
 
 include("tools.jl")
 include("appliers.jl")
@@ -47,7 +51,7 @@ function main()
     # desired
     Y = readcsv("data/test6-1.csv")'
 
-    Y_ecapr = ecapr(X, Y)
+    Y_ecapr = ecapr(X, Y, :quadratic)
 
     Y_msac = applyTransformation(X, matlabAffine(X, Y))
 
